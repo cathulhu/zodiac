@@ -2,37 +2,30 @@ var httpwebsite = require('url');
 var getfiles = require('fs')
 var downloadRequest = require("request");
 const myCheerio = require('cheerio');
+var qs = require('querystring');
+const concat = require('concat-stream');
 
-var express = require('express');
-var app = express();
-
-function renderPage(path, theResponce)
-{
-  getfiles.readFile(path, null, function(error, data)
-  {
-      if (error) {
-        theResponce.writeHead(666)
-        theResponce.write('shit broke yo!')
-      }
-      else
-      {
-        theResponce.write(data);
-      }
-        theResponce.end();
-  });
-}
+var requestBody = "";
+const chunks = [];
 
 module.exports =
 {
   processRequest: function(incomingRequest, outResponse)
-
   {
     outResponse.writeHead(200, {'Content-Type': 'text/html'});
 
-
-
     var path = httpwebsite.parse(incomingRequest.url).pathname;
     console.log(path);
+    console.log(incomingRequest.data);
+    // console.log(incomingRequest);
+    // console.log(outResponse);
+
+    concat(incomingRequest, dataFromBuffer =>
+    {
+      requestBody = qs.parse(dataFromBuffer.toString());
+      console.log(proccessedData);
+    });
+
     switch (path) {
       case '/':
       renderPage('./index.html', outResponse)
@@ -40,6 +33,41 @@ module.exports =
       case '/go':
       renderPage('./go.html', outResponse)
       break;
+
+    incomingRequest.on('error', (err) =>
+    {
+      console.error(err);
+      incomingRequest.statusCode = 400;
+      incomingRequest.end();
+    });
+
+    outResponse.on('error', (err) =>
+    {
+      console.error(err);
+    });
+
+
+    if (incomingRequest.method === 'POST')
+    {
+      console.log("post logic triggered")
+      incomingRequest.on('data', chunk => chunks.push(chunk));
+      request.on('end', () =>
+      {
+
+    });
+
+    }
+    else
+    {
+      outResponse.statusCode = 404;
+      outResponse.end();
+    }
+
+
+
+
+
+
 
 
 
@@ -61,7 +89,8 @@ module.exports =
           var resultSongs = cheerioload('span[class="tracklist-item__text__headline targeted-link__target we-truncate we-truncate--single-line ember-view"]').text();
           // var resultBands = cheerioload('div[class="we-truncate we-truncate--single-line ember-view"]').html();
 
-          cheerioload('a[class="table__row__link table__row__link--secondary"]').each(function(i, element) {
+          cheerioload('a[class="table__row__link table__row__link--secondary"]').each(function(i, element)
+          {
           var a = cheerioload(element);
           var holder = a.attr('data-test-song-artist-url');
           bandsList[i]=holder;
@@ -88,6 +117,11 @@ module.exports =
 
       });
 
+
+
+
+
+
       break;
     default:
     outResponse.writeHead(666);
@@ -96,3 +130,23 @@ module.exports =
   }
 }
 };
+
+
+
+
+
+function renderPage(path, theResponce)
+{
+  getfiles.readFile(path, null, function(error, data)
+  {
+      if (error) {
+        theResponce.writeHead(666)
+        theResponce.write('shit broke yo!')
+      }
+      else
+      {
+        theResponce.write(data);
+      }
+        theResponce.end();
+  });
+}
