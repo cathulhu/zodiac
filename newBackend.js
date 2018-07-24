@@ -7,6 +7,7 @@ const concat = require('concat-stream');
 var express = require('express');
 var app = express();
 var http = require('http');
+var https = require('https');
 
 var cheerioloadPage;
 var targetURL = "";
@@ -87,16 +88,39 @@ module.exports =
             });
           });
       }
+
       else if (incomingRequest.method === 'POST' && incomingRequest.url === '/auth')
-      
       {
 
-        
+        console.log("spotify 1st auth step...");
 
+        function OnResponse(response) 
+        {
+          var responseData = '';
+          
+          response.on('data', function(dataChunkIn)
+          {
+            console.log("getting response:" + dataChunkIn.toString );
+            responseData+=dataChunkIn;
+            
+          });
 
+          response.on('end', function()
+          {
+            outResponse.write(responseData);
+            outResponse.end();
+            console.log(responseData);
+          });
+  
+        } 
+  
 
-      }
+        https.get("https://accounts.spotify.com/authorize?scope=playlist-modify-private%20playlist-modify-public&redirect_uri=http%3A%2F%2F127.0.0.1:8000%2F&response_type=code&client_id=d8c3567b6c8f4a2db4e90c8343bed3ab", OnResponse);
+      
+      }   
 
+      else
+      
       {
         switch(path)
         {
@@ -105,10 +129,15 @@ module.exports =
             renderPage('./index.html', outResponse);
             break;
 
-          default:
-            outResponse.writeHead(666);
-            outResponse.write('nothin here');
-            outResponse.end();
+            case '/en/login':
+            outResponse.writeHead(200, { 'Content-Type': 'text/html' });
+            renderPage('./go.html', outResponse);
+            break;
+
+          // default:
+          //   outResponse.writeHead(666);
+          //   outResponse.write('nothin here');
+          //   outResponse.end();
         }
       }
 
@@ -118,7 +147,55 @@ module.exports =
 
  
 
-// function updatePage(element, page)
+
+
+function renderPage(path, theResponse) 
+{
+  console.log("Begining Render...");
+  getfiles.readFile(path, null, function (error, data) {
+    if (error) {
+      theResponse.writeHead(666);
+      theResponse.write('shit broke yo!');
+    }
+    else 
+    {
+      console.log("writing page data...");
+      theResponse.write(data);
+    }
+    theResponse.end();
+  });
+
+
+}
+
+
+
+//https://itunes.apple.com/us/playlist/dooooomtreeee/pl.u-gxblgbxC5560Aq
+
+
+
+
+
+
+
+
+/*
+
+        //https%3A%2F%2Faccounts.spotify.com
+
+        
+        */
+
+
+
+
+
+
+
+
+
+
+        // function updatePage(element, page)
 // {
   
 //   var indexPage 
@@ -140,76 +217,3 @@ module.exports =
 //   });
 
 // }
-
-
-
-
-function renderPage(path, theResponce) 
-{
-  console.log("Begining Render...");
-  getfiles.readFile(path, null, function (error, data) {
-    if (error) {
-      theResponce.writeHead(666);
-      theResponce.write('shit broke yo!');
-    }
-    else 
-    {
-      console.log("writing page data...");
-      theResponce.write(data);
-    }
-    theResponce.end();
-  });
-
-
-}
-
-
-
-//https://itunes.apple.com/us/playlist/dooooomtreeee/pl.u-gxblgbxC5560Aq
-
-
-
-
-
-
-
-
-/*
-
-        //https%3A%2F%2Faccounts.spotify.com
-
-        var urlData = 
-        {
-          host:'accounts.spotify.com',
-          path:'%2Fauthorize?scope=playlist-modify-private%20playlist-modify-public&redirect_uri=http%3A%2F%2F127.0.0.1:8000%2F&response_type=code&client_id=d8c3567b6c8f4a2db4e90c8343bed3ab',
-          method: 'GET',
-          client_id:'d8c3567b6c8f4a2db4e90c8343bed3ab'
-        }
-  
-        function OnResponse(response) 
-        {
-          var responseData = '';
-          
-          response.on('data', function(dataChunkIn)
-          {
-            console.log("downloading responce...");
-            console.log("getting data from:" + urlData.host + "\n");
-            responseData+=dataChunkIn;
-            outResponse.write(responseData);
-          });
-
-          
-  
-          response.on('end', function()
-          {
-            
-            console.log(responseData);
-          });
-  
-        } 
-  
-        
-        http.request(urlData, OnResponse);
-        outResponse.writeHead(200, { 'Content-Type': 'text/html' });
-
-        */
