@@ -1,10 +1,23 @@
 <!DOCTYPE html>
 <html>
 
-<form method="POST">
-Apple Music playlist URL
-<input name="uri" type="text">
-<input type="submit" value="Create Spotify Playlist">
+<!-- <head> 
+  <script type="text/javascript" src="/spotifyAuth.js">  </script> 
+</head> -->
+
+
+<form method="POST" action="auth">
+    Apple Music playlist URL
+    <input type="submit" value="get Spotify auth">
+  </form>
+
+<!-- <a href="https://accounts.spotify.com/authorize?scope=playlist-modify-private%20playlist-modify-public&redirect_uri=http%3A%2F%2F127.0.0.1:8000%2F&response_type=code&client_id=d8c3567b6c8f4a2db4e90c8343bed3ab"> Click for auth </a> -->
+
+
+<form method="POST" action="go">
+  Apple Music playlist URL
+  <input name="uri" type="URL">
+  <input type="submit" value="Create Spotify Playlist">
 </form>
 
 <p> Conversion STATUS:
