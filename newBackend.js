@@ -1,6 +1,6 @@
 var httpwebsite = require('url');
 var getfiles = require('fs')
-var downloadRequest = require("request");
+var webRequest = require("request");
 const cheerio = require('cheerio');
 var qs = require('querystring');
 const concat = require('concat-stream');
@@ -9,36 +9,43 @@ var app = express();
 var http = require('http');
 var https = require('https');
 
+const util = require('util')
+
 var cheerioloadPage;
 var targetURL = "";
 var downloadedPage = "";
 
-var playlistName = ""
+var spotifyAuthCode = "";
+var accessToken = "";
+
+var playlistName = "";
 var count = 0;
 var bandsList = [];
 var songsList = [];
 
 module.exports =
 {
-    processRequest: function (incomingRequest, outResponse) 
+    processRequest: function (Request, outResponse) 
     {
 
-      var path = httpwebsite.parse(incomingRequest.url).pathname;
+      
+
+      var path = httpwebsite.parse(Request.url).pathname;
 
       console.log("path: " + path);
-      console.log("protocol: " + incomingRequest.method.toString());
+      console.log("incoming protocol: " + Request.method.toString());
       // console.log(incomingRequest.data);
 
-      if (incomingRequest.method === 'POST' && incomingRequest.url === '/go') 
+      if (Request.method === 'POST' && Request.url === '/go') 
       {
           console.log("POST logic triggered")
 
-          incomingRequest.on('data', function (bufferChunk) 
+          Request.on('data', function (bufferChunk) 
           {
             targetURL = bufferChunk.toString();
           });
 
-          incomingRequest.on('end', function() 
+          Request.on('end', function() 
           {
             // console.log ("raw data: " + targetURL);
             targetURL = targetURL.slice(18, targetURL.length);
@@ -47,7 +54,7 @@ module.exports =
             console.log("Connecting... Target URL: " + targetURL);
 
 
-            downloadRequest(targetURL, function(error, response, htmlBody)
+            webRequest(targetURL, function(error, response, htmlBody)
             {
                 console.log("trying to connect")
 
@@ -89,37 +96,65 @@ module.exports =
           });
       }
 
-      else if (incomingRequest.method === 'POST' && incomingRequest.url === '/auth')
+      if (Request.method === 'GET' && Request.url.slice(0,7) === '/?code=') 
       {
-
-        console.log("spotify 1st auth step...");
-
-        function OnResponse(response) 
-        {
-          var responseData = '';
+        //first spotify code is aquired here, then trade for access token
+        spotifyAuthCode = Request.url.slice(7);
+        console.log("auth code recieved: " + spotifyAuthCode);
           
-          response.on('data', function(dataChunkIn)
-          {
-            console.log("getting response:" + dataChunkIn.toString );
-            responseData+=dataChunkIn;
-            
-          });
+        //trade in for token
+        var postHeaders = 
+        {
+            'Authorization': 'Basic ' + 'ZDhjMzU2N2I2YzhmNGEyZGI0ZTkwYzgzNDNiZWQzYWI6ZTZmNWIwM2ZlNzdlNDZjMmFhYTkzOTJhOThhMmZkYzQ='
+        }
+        
+        var postOptions = 
+        {
+          url: 'https://accounts.spotify.com/api/token',
+          method: 'POST',
+          headers: postHeaders,
+          json: true,
+          form: {'grant_type': 'authorization_code', 'code': spotifyAuthCode, 'redirect_uri': 'http://127.0.0.1:8000/'}
+        }
 
-          response.on('end', function()
-          {
-            outResponse.write(responseData);
-            outResponse.end();
-            console.log(responseData);
-          });
-  
-        } 
-  
+   
 
-        https.get("https://accounts.spotify.com/authorize?scope=playlist-modify-private%20playlist-modify-public&redirect_uri=http%3A%2F%2F127.0.0.1:8000%2F&response_type=code&client_id=d8c3567b6c8f4a2db4e90c8343bed3ab", OnResponse);
+        // console.log("\n sending code:" + spotifyAuthCode + "\n");
+        // console.log("\n POST request header: " + util.inspect(Request.headers));
+
+        // console.log("\n POST request url: " + util.inspect(Request.url));
+        
+        // console.log("\n POST request body: " + util.inspect(Request.body));
+
+
+        webRequest(postOptions, function(error, response, body)
+        {
+
+          console.log("\n POST request token body: " + util.inspect(response.request.body));
+          console.log("\n POST request token headers: " + util.inspect(response.request.headers));
+
+          // console.log("\n \n Response: " + util.inspect(response.body));
+
+          if (!error && response.statusCode == 200) 
+          {
+            // Print out the response body
+            console.log("response body:" + body)
+          }
+
+          accessToken = response.body.access_token;
+          console.log("\nAccess token saved!: " + accessToken + "\n \ntoken good for: " + response.body.expires_in);
+          console.log("\nPermission scope: " + response.body.scope);
+
+
+
+        });
+
+        
+      }
+
       
-      }   
 
-      else
+      
       
       {
         switch(path)
@@ -129,10 +164,15 @@ module.exports =
             renderPage('./index.html', outResponse);
             break;
 
-            case '/en/login':
+            case '/auth':
             outResponse.writeHead(200, { 'Content-Type': 'text/html' });
-            renderPage('./go.html', outResponse);
+            renderPage('./redirect.html', outResponse);
             break;
+
+            // case '/en/login':
+            // outResponse.writeHead(200, { 'Content-Type': 'text/html' });
+            // renderPage('./go.html', outResponse);
+            // break;
 
           // default:
           //   outResponse.writeHead(666);
